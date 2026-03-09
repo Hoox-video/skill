@@ -60,7 +60,7 @@ curl -H "Authorization: Bearer $HOOX_API_KEY" \
 
 # List avatar looks (filter by gender, tags)
 curl -H "Authorization: Bearer $HOOX_API_KEY" \
-  "https://app.hoox.video/api/public/v1/avatar/list?tags=business"
+  "https://app.hoox.video/api/public/v1/avatar/list?tags=ecommerce"
 ```
 
 ### Step 2 -- Generate script (optional)
@@ -69,7 +69,7 @@ curl -H "Authorization: Bearer $HOOX_API_KEY" \
 curl -X POST "https://app.hoox.video/api/public/v1/script/generate" \
   -H "Authorization: Bearer $HOOX_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "Explain sustainable energy", "duration": 60, "webSearch": true}'
+  -d '{"prompt": "Create a 60-second product demo script for our new wireless earbuds, focusing on benefits, social proof, and a strong call-to-action to buy now.", "duration": 60, "webSearch": true}'
 # Response: { "script": "...", "cost": 5, "extractedImages": [...] }
 ```
 
@@ -83,7 +83,7 @@ curl -X POST "https://app.hoox.video/api/public/v1/generation/start" \
   -H "Authorization: Bearer $HOOX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "prompt": "Explain sustainable energy",
+    "prompt": "Your prompt here...",
     "duration": 60,
     "voice_id": "VOICE_ID",
     "avatar_id": "AVATAR_LOOK_ID",
