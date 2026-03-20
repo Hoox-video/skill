@@ -447,15 +447,21 @@ Create a custom avatar from a prompt or images. [Full docs](https://docs.hoox.vi
 |-------|------|----------|-------------|
 | `prompt` | string | No | Description for AI-generated avatar |
 | `style` | string | No | `iphone` (default), `selfie`, `podcast`, `car`, `conference`, `raw` |
-| `format` | string | No | `vertical` (default) or `horizontal` |
+| `format` | string | No | `vertical` (default) or `horizontal` (only for prompt-based) |
+| `resolution` | string | No | `2K` (default) or `4K` (costs more credits) |
 | `name` | string | No | Avatar name |
 | `place` | string | No | Location/setting description |
-| `imageUrls` | string[] | No | Reference images for the avatar |
-| `images` | string[] | No | Alias for `imageUrls` |
-| `elementImages` | string[] | No | Additional element images |
+| `imageUrls` | string[] | No | Alias for `images` |
+| `images` | string[] | No | Array of image URLs to use as-is for looks (not reference) |
+| `elementImages` | string[] | No | Reference images for the AI to incorporate (logos, products) |
 | `webhook_url` | string | No | URL for completion callback |
 
-Provide either `prompt` (AI generates image) or `imageUrls` (use provided images).
+Provide either `prompt` (AI generates image) or `images` (use provided images directly).
+
+**Credit Costs:**
+- **Prompt-based (2K)**: 2 credits
+- **Prompt-based (4K)**: 4 credits
+- **Image-based**: Free
 
 Response (201): `{ "avatar_id": "...", "look_id": "..." }`
 
@@ -471,8 +477,9 @@ Create a new look for an existing avatar. [Full docs](https://docs.hoox.video/ap
 | `look_id` | string | Yes | Source look ID to use as reference |
 | `prompt` | string | Yes | Description of the new look |
 | `format` | string | No | `vertical` or `horizontal` |
+| `resolution` | string | No | `2K` (default) or `4K` (costs more credits) |
 | `style` | string | No | `selfie`, `podcast`, `car`, `iphone`, `conference`, `raw` |
-| `upscale` | boolean | No | Upscale generated image (extra credits) |
+| `upscale` | boolean | No | Upscale generated image (+1.5 credits) |
 | `imageUrls` | string[] | No | Additional reference images |
 | `look_name` | string | No | Name for the new look |
 | `place` | string | No | Location/setting |
@@ -480,6 +487,11 @@ Create a new look for an existing avatar. [Full docs](https://docs.hoox.video/ap
 | `webhook_url` | string | No | URL for completion callback |
 
 If `avatar_id` refers to a public avatar, it is automatically duplicated to your space.
+
+**Credit Costs:**
+- **Base (2K)**: 2 credits
+- **Base (4K)**: 4 credits
+- **Upscale**: +1.5 credits
 
 Response (201): `{ "avatar_id": "...", "look_id": "..." }`
 
