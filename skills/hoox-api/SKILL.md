@@ -165,12 +165,21 @@ Retry behavior: 3 attempts with 1s, 2s, 4s delays. Your endpoint must respond 20
 
 ## Error Handling
 
-All errors follow this format:
+All errors follow one of these formats:
 
 ```json
 {
   "error": "Error message",
-  "details": [{ "code": "error_code", "message": "Details", "field": "param_name" }]
+  "code": "ERROR_CODE"
+}
+```
+
+Or for validation errors:
+
+```json
+{
+  "error": "Validation failed",
+  "details": [{ "code": "ERROR_CODE", "message": "Details", "field": "param_name" }]
 }
 ```
 
@@ -282,13 +291,34 @@ Export a completed video to downloadable MP4. [Full docs](https://docs.hoox.vide
 | `format` | string | No | `vertical`, `square`, `ads`, `custom` |
 | `width` | number | No | Custom width 1-5000 (with `format: "custom"`) |
 | `height` | number | No | Custom height 1-5000 (with `format: "custom"`) |
-| `avatar_model` | string | No | `standard`, `premium`, `ultra`, `veo-3`, `veo-3-fast` |
+| `avatar_model` | string | No | `standard`, `premium`, `ultra`, `veo-3-fast`, `veo-3`, `veo-3-lite`, `ora-lite`, `ora-standard`, `ora-pro`. |
 | `webhook_url` | string | No | URL for completion callback |
 
 Avatar model compatibility:
 - Avatars with `previewUrl` -> only `standard`
-- Avatars without `previewUrl` -> `premium`, `ultra`, `veo-3`, `veo-3-fast`
-- Videos created with `use_veo3: true` -> only `veo-3` or `veo-3-fast`
+- Avatars without `previewUrl` -> `premium`, `ultra`, `veo-3`, `veo-3-fast`, `veo-3-lite`, `ora-lite`, `ora-standard`, `ora-pro`
+- Videos created with `use_veo3: true` -> `veo-3` or `veo-3-fast` (or other AI models)
+
+### Export Credit Costs
+
+Total cost = Base export cost + High resolution surcharge + Avatar model cost.
+
+| Component | Condition | Cost |
+|-----------|-----------|------|
+| **Base Export** | API-generated video | **0 credits** (included) |
+| | Dashboard-created video | 5 credits / 30s |
+| **High Res** | > 1920px (W) OR > 1080px (H) | +2.5 credits / 30s |
+| **Avatar Model** | `standard` | Free |
+| | `premium` | 0.8 credits / sec (visibility) |
+| | `ultra` | 2.3 credits / sec (visibility) |
+| | `veo-3-fast` / `veo-3-lite` (1080p) | 2.3 credits / sec (8s segments) |
+| | `veo-3` | 5 credits / sec (8s segments) |
+| | `veo-3-lite` (720p) | 0.5 credits / sec (4s/6s segments) |
+| | `ora-lite` | 0.5 credits / sec (8s segments) |
+| | `ora-standard` | 1 credits / sec (8s segments) |
+| | `ora-pro` | 2 credits / sec (8s segments) |
+
+*Note: Premium/Ultra models bill by visibility duration; Veo/Ora bill by fixed segments.*
 
 First export for API-generated videos is free.
 
@@ -386,7 +416,7 @@ Query params: `gender`, `tags` (comma-separated), `onlyPublic` (`true` to exclud
 ]
 ```
 
-`model_available`: `["standard"]` = video-based avatar, `["premium", "ultra", "veo-3", "veo-3-fast"]` = image-based avatar.
+`model_available`: `["standard"]` = video-based avatar, `["premium", "ultra", "veo-3", "veo-3-fast", "veo-3-lite", "ora-lite", "ora-standard", "ora-pro"]` = image-based avatar.
 
 Use the look `id` as `avatar_id` in `/generation/start`.
 
@@ -513,7 +543,7 @@ Status values: `pending`, `completed`, `failed`.
     "avatar_name": "Emma",
     "look_name": "Casual",
     "thumbnail": "https://...",
-    "model_available": ["premium", "ultra", "veo-3", "veo-3-fast"]
+    "model_available": ["premium", "ultra", "veo-3-fast", "veo-3", "veo-3-lite", "ora-lite", "ora-standard", "ora-pro"]
   }
 }
 ```
