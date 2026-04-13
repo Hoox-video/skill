@@ -291,12 +291,12 @@ Export a completed video to downloadable MP4. [Full docs](https://docs.hoox.vide
 | `format` | string | No | `vertical`, `square`, `ads`, `custom` |
 | `width` | number | No | Custom width 1-5000 (with `format: "custom"`) |
 | `height` | number | No | Custom height 1-5000 (with `format: "custom"`) |
-| `avatar_model` | string | No | `standard`, `premium`, `ultra`, `veo-3-fast`, `veo-3`, `veo-3-lite`, `ora-lite`, `ora-standard`, `ora-pro`. |
+| `avatar_model` | string | No | `standard`, `premium`, `ultra`, `veo-3-fast`, `veo-3`, `veo-3-lite`, `ora-lite`, `ora-standard`, `ora-pro`, `seedance-2`, `seedance-2-fast`. |
 | `webhook_url` | string | No | URL for completion callback |
 
 Avatar model compatibility:
 - Avatars with `previewUrl` -> only `standard`
-- Avatars without `previewUrl` -> `premium`, `ultra`, `veo-3`, `veo-3-fast`, `veo-3-lite`, `ora-lite`, `ora-standard`, `ora-pro`
+- Avatars without `previewUrl` -> `premium`, `ultra`, `veo-3`, `veo-3-fast`, `veo-3-lite`, `ora-lite`, `ora-standard`, `ora-pro`, `seedance-2`, `seedance-2-fast`
 - Videos created with `use_veo3: true` -> `veo-3` or `veo-3-fast` (or other AI models)
 
 ### Export Credit Costs
@@ -317,6 +317,8 @@ Total cost = Base export cost + High resolution surcharge + Avatar model cost.
 | | `ora-lite` | 0.5 credits / sec (8s segments) |
 | | `ora-standard` | 1 credits / sec (8s segments) |
 | | `ora-pro` | 2 credits / sec (8s segments) |
+| | `seedance-2` | varies |
+| | `seedance-2-fast` | varies |
 
 *Note: Premium/Ultra models bill by visibility duration; Veo/Ora bill by fixed segments.*
 
@@ -416,7 +418,7 @@ Query params: `gender`, `tags` (comma-separated), `onlyPublic` (`true` to exclud
 ]
 ```
 
-`model_available`: `["standard"]` = video-based avatar, `["premium", "ultra", "veo-3", "veo-3-fast", "veo-3-lite", "ora-lite", "ora-standard", "ora-pro"]` = image-based avatar.
+`model_available`: `["standard"]` = video-based avatar, `["premium", "ultra", "veo-3", "veo-3-fast", "veo-3-lite", "ora-lite", "ora-standard", "ora-pro", "seedance-2", "seedance-2-fast"]` = image-based avatar.
 
 Use the look `id` as `avatar_id` in `/generation/start`.
 
@@ -543,7 +545,7 @@ Status values: `pending`, `completed`, `failed`.
     "avatar_name": "Emma",
     "look_name": "Casual",
     "thumbnail": "https://...",
-    "model_available": ["premium", "ultra", "veo-3-fast", "veo-3", "veo-3-lite", "ora-lite", "ora-standard", "ora-pro"]
+    "model_available": ["premium", "ultra", "veo-3-fast", "veo-3", "veo-3-lite", "ora-lite", "ora-standard", "ora-pro", "seedance-2", "seedance-2-fast"]
   }
 }
 ```
