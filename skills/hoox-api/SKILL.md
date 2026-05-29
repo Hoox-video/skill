@@ -454,7 +454,8 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 | `type` | string | Yes | `image` or `video` |
 | `model` | string | Yes | Model name from `/asset/models` |
 | `prompt` | string | Yes | Description of the desired output |
-| `images` | array | No | Reference images: `[{"url": "...", "reference_id": "...", "source": "avatar"\|"asset"\|"upload", "media_kind": "image"\|"video"\|"audio"}]` |
+| `references` | array | No | Generic reference inputs (most models). Each item: `{"url": "https://...", "reference_id": "asset_id", "source": "avatar"\|"asset"\|"upload"}`. Provide `url` or `reference_id` (or both). `reference_id` is resolved automatically from the space media library. |
+| `[slot_name]` | object | Depends | Named input slots for models that have `inputSlots` (e.g. `start_image`, `end_image`, `motion_video`). Each value: `{"url": "...", "reference_id": "..."}`. Check `/asset/models/{name}` `input_schema` for slot names and requirements. Cannot be combined with `references`. |
 | `generation_count` | number | No | Number of outputs to generate (1–4, default 1) |
 | `duration` | string | No | Video duration — `"4s"`, `"6s"`, `"8s"`, `"5"` … `"15"`, `"auto"` |
 | `aspect_ratio` | string | No | `"16:9"`, `"9:16"`, `"1:1"`, `"3:2"`, `"2:3"`, `"4:3"`, `"3:4"`, `"auto"` |
@@ -463,6 +464,26 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 | `parent_media_id` | string | No | Asset ID to use as video-to-video source |
 | `avatar_description` | string | No | Seedance UGC only — subject appearance/actions |
 | `webhook_url` | string | No | URL for async completion callback |
+
+**Reference inputs — two modes:**
+
+*Generic mode* (most text-to-image / text-to-video models):
+```json
+{
+  "references": [
+    { "url": "https://cdn.example.com/photo.jpg", "source": "upload" },
+    { "reference_id": "asset_abc123", "source": "asset" }
+  ]
+}
+```
+
+*Named slot mode* (image-to-video and similar models — check `input_schema` from `/asset/models/{name}`):
+```json
+{
+  "start_image": { "url": "https://cdn.example.com/start.jpg" },
+  "end_image":   { "reference_id": "asset_abc123" }
+}
+```
 
 Credits are debited immediately. Poll `/asset/status/{assetId}` to track progress.
 
