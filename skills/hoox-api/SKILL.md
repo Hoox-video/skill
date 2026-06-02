@@ -139,7 +139,7 @@ Poll every 5s. Download the MP4 from `result.video_url`.
 
 Pass `webhook_url` in generation/export/avatar requests to receive async POST notifications instead of polling.
 
-4 task types with different payload structures:
+5 task types with different payload structures:
 
 | Task | Identifier fields | Triggered by |
 |------|------------------|--------------|
@@ -147,8 +147,9 @@ Pass `webhook_url` in generation/export/avatar requests to receive async POST no
 | `video_export` | `job_id` | `/export/start` |
 | `avatar_create` | `avatar_id`, `look_id` | `/avatar/create` |
 | `avatar_edit` | `avatar_id`, `look_id` | `/avatar/edit` |
+| `asset_generation` | `asset_id` | `/asset/start` |
 
-Success payload example:
+Success payload examples:
 
 ```json
 {
@@ -156,6 +157,21 @@ Success payload example:
   "job_id": "run_abc123",
   "status": "completed",
   "result": { "video_id": "...", "thumbnail_url": "...", "cost": 5 }
+}
+```
+
+```json
+{
+  "task": "asset_generation",
+  "asset_id": "asset_abc123",
+  "status": "completed",
+  "result": {
+    "asset_url": "https://cdn.hoox.video/assets/...",
+    "asset_type": "video",
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6
+  }
 }
 ```
 
@@ -381,6 +397,35 @@ Providers: `google`, `openai`, `sora`, `kling`, `seedance`, `zimage`, `flux`, `g
 
 Tags: `text-to-image`, `image-to-video`, `text-to-video`, `upscale`, etc.
 
+Current models (non-exhaustive — call the endpoint for the live list):
+
+| Model | Type | Provider | Notes |
+|-------|------|----------|-------|
+| `veo-3.1` / `veo-3.1-fast` / `veo-3.1-lite` | video | google | Text-to-video with audio |
+| `veo-3.1-flf` | video | google | First & last frame slots (`first_frame`, `last_frame`) |
+| `veo-3.1-extend` | video | google | Extend existing video (`source_video` slot) |
+| `gemini-omni-video` | video | google | |
+| `kling-v3-pro` / `kling-v3-standard` | video | kling | |
+| `kling-v3-motion-pro` / `kling-v3-motion-standard` | video | kling | Motion control (`start_image`, `motion_video`) |
+| `kling-o3-pro` / `kling-o3-standard` | video | kling | |
+| `kling-o3-edit-pro` / `kling-o3-edit-standard` | video | kling | Edit video (`source_video` slot) |
+| `kling-pro` / `kling-standard` | video | kling | Kling 2.6, named slots (`start_image`, `end_image`) |
+| `kling-2.5-standard` | video | kling | |
+| `kling-2.6-motion-pro` / `kling-2.6-motion-control` | video | kling | Motion control |
+| `seedance-2.0` / `seedance-2.0-fast` / `seedance-2.0-ugc` | video | bytedance | |
+| `seedance-1.5` | video | bytedance | |
+| `sora-2` / `sora-2-pro` | video | sora | |
+| `grok-imagine-video` | video | xai | |
+| `grok-imagine-video-edit` | video | xai | Edit video (`source_video` slot) |
+| `upscale-video` | video | bytedance | Upscale video (`source_video` slot) |
+| `flux-2-pro` / `flux-2-max` | image | flux | |
+| `gpt-image-2` | image | openai | |
+| `grok-imagine-image` | image | xai | |
+| `nano-banana-2` / `nano-banana-pro` | image | gemini | |
+| `seedream-4.5` / `seedream-5-lite` | image | bytedance | |
+| `reve` / `reve-fast` | image | reve | |
+| `z-image-turbo` | image | zimage | |
+
 ```json
 {
   "models": [
@@ -423,7 +468,7 @@ Calculate credit cost before starting a generation.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `model` | string | Yes | Model name |
-| `duration` | string | No | Target duration (e.g. "6s", "10") |
+| `duration` | number | No | Target duration in seconds (e.g. `6`, `10`) |
 | `resolution` | string | No | e.g. "720p", "1080p" |
 | `model_settings` | object | No | Extra model-specific settings |
 | `image_count` | number | No | Number of reference images |
@@ -454,10 +499,10 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 | `type` | string | Yes | `image` or `video` |
 | `model` | string | Yes | Model name from `/asset/models` |
 | `prompt` | string | Yes | Description of the desired output |
-| `references` | array | No | Generic reference inputs (most models). Each item: `{"url": "https://...", "reference_id": "asset_id", "source": "avatar"\|"asset"\|"upload"}`. Provide `url` or `reference_id` (or both). `reference_id` is resolved automatically from the space media library. |
-| `[slot_name]` | object | Depends | Named input slots for models that have `inputSlots` (e.g. `start_image`, `end_image`, `motion_video`). Each value: `{"url": "...", "reference_id": "..."}`. Check `/asset/models/{name}` `input_schema` for slot names and requirements. Cannot be combined with `references`. |
+| `references` | array | No | Generic reference inputs (most models). Each item must set exactly one of: `{"url": "https://..."}` (direct URL), `{"asset_id": "..."}` (existing space asset), or `{"avatar_id": "..."}` (space avatar). |
+| `[slot_name]` | object | Depends | Named input slots for models that have `inputSlots` (e.g. `start_image`, `end_image`, `motion_video`). Each value: `{"url": "..."}`, `{"asset_id": "..."}`, or `{"avatar_id": "..."}`. Check `/asset/models/{name}` `input_schema` for slot names and requirements. Cannot be combined with `references`. |
 | `generation_count` | number | No | Number of outputs to generate (1–4, default 1) |
-| `duration` | string | No | Video duration — `"4s"`, `"6s"`, `"8s"`, `"5"` … `"15"`, `"auto"` |
+| `duration` | number | No | Video duration in seconds (e.g. `4`, `6`, `8`, `10`) |
 | `aspect_ratio` | string | No | `"16:9"`, `"9:16"`, `"1:1"`, `"3:2"`, `"2:3"`, `"4:3"`, `"3:4"`, `"auto"` |
 | `resolution` | string | No | `"720p"`, `"1080p"`, `"4k"` (model-dependent) |
 | `model_settings` | object | No | Extra model-specific options (see `/asset/models/{name}`) |
@@ -471,8 +516,9 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 ```json
 {
   "references": [
-    { "url": "https://cdn.example.com/photo.jpg", "source": "upload" },
-    { "reference_id": "asset_abc123", "source": "asset" }
+    { "url": "https://cdn.example.com/photo.jpg" },
+    { "asset_id": "asset_abc123" },
+    { "avatar_id": "avatar_xyz789" }
   ]
 }
 ```
@@ -481,7 +527,7 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 ```json
 {
   "start_image": { "url": "https://cdn.example.com/start.jpg" },
-  "end_image":   { "reference_id": "asset_abc123" }
+  "end_image":   { "asset_id": "asset_abc123" }
 }
 ```
 
