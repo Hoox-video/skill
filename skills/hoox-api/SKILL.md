@@ -393,9 +393,11 @@ Two habits keep the user's asset library clean and traceable — apply them by d
 
 **Organization — group project/batch work in a dedicated folder.** Whenever the user works on a named project or asks for several related assets (a batch), create one asset folder up front and route every generation into it via `folder_id`.
 
-1. `GET /asset/folder/list` — reuse an existing folder instead of creating a duplicate.
-2. `POST /asset/folder/create` — `{ "name": "Summer Campaign" }` → returns the folder `id`.
+1. `GET /folder/list?type=assets` — reuse an existing folder instead of creating a duplicate.
+2. `POST /folder/create` — `{ "name": "Summer Campaign", "type": "assets" }` → returns the folder `id`.
 3. Pass that `id` as `folder_id` on each `/asset/start` call for the project.
+
+Folders can also be created for the video library with `type: "videos"`.
 
 **Lineage — preserve the edit history with `parent_media_id`.** Whenever a generation is *derived* from an existing asset (edit, animation / image-to-video, upscale, restyle, variation), set `parent_media_id` to the **source asset's id**. This links the new output to its source in the dashboard's history tree so the full chain stays visible (and the output inherits the source's folder).
 
@@ -535,7 +537,7 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 | `resolution` | string | No | `"720p"`, `"1080p"`, `"4k"` (model-dependent) |
 | `model_settings` | object | No | Extra model-specific options (see `/asset/models/{name}`) |
 | `parent_media_id` | string | No | **Source asset this generation is derived from** (edit, animation, upscale, restyle, variation). Links the output to its source in the dashboard history tree and inherits the source's folder. Set it in addition to passing the source as a reference. See [Organization & lineage](#asset-organization--lineage). |
-| `folder_id` | string | No | Asset folder to save the output(s) into (from `/asset/folder/create` or `/asset/folder/list`). Ignored when `parent_media_id` is set. See [Organization & lineage](#asset-organization--lineage). |
+| `folder_id` | string | No | Asset folder to save the output(s) into (from `/folder/create` or `/folder/list`). Ignored when `parent_media_id` is set. See [Organization & lineage](#asset-organization--lineage). |
 | `avatar_description` | string | No | Seedance UGC only — subject appearance/actions |
 | `webhook_url` | string | No | URL for async completion callback |
 
@@ -610,44 +612,45 @@ When failed: `{ "status": "failed", "error": { "code": "...", "message": "..." }
 
 ---
 
-### POST /asset/folder/create
+### POST /folder/create
 
-Create an asset folder to organize generated assets. See [Asset organization & lineage](#asset-organization--lineage).
+Create an asset or video folder to organize the library. See [Asset organization & lineage](#asset-organization--lineage).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Folder display name |
-| `parent_folder_id` | string | No | Existing asset folder to nest under (omit/`null` for a root folder) |
+| `type` | string | No | `assets` (default) or `videos` |
+| `parent_folder_id` | string | No | Existing folder of the same type to nest under (omit/`null` for a root folder) |
 
 Response (201):
 ```json
 {
   "id": "folder_abc123",
   "name": "Summer Campaign",
+  "type": "assets",
   "parent_folder_id": null,
-  "usage": "assets",
   "created_at": "2025-01-15T10:30:00.000Z"
 }
 ```
 
-Use the returned `id` as `folder_id` in `/asset/start`. An unknown `parent_folder_id` returns `400 invalid_value`.
+Use the returned `id` (for an asset folder) as `folder_id` in `/asset/start`. An invalid `type` or an unknown/mismatched `parent_folder_id` returns `400 invalid_value`.
 
 ---
 
-### GET /asset/folder/list
+### GET /folder/list
 
-List the asset folders in the space. Use it to reuse an existing folder's `id` before creating a new one.
+List the folders in the space. Use it to reuse an existing folder's `id` before creating a new one.
+
+Query params: `type` (`assets` or `videos`) — omit to return folders of all types.
 
 Response (200):
 ```json
 {
   "folders": [
-    { "id": "folder_abc123", "name": "Summer Campaign", "parent_folder_id": null, "usage": "assets", "created_at": "2025-01-15T10:30:00.000Z" }
+    { "id": "folder_abc123", "name": "Summer Campaign", "type": "assets", "parent_folder_id": null, "created_at": "2025-01-15T10:30:00.000Z" }
   ]
 }
 ```
-
-Only `assets`-scoped folders are returned (video folders are excluded).
 
 ---
 
