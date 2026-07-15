@@ -387,6 +387,36 @@ The duplicated video needs to be exported via `/export/start` to get the final M
 
 Assets are standalone AI-generated images or videos (not tied to the video generation workflow).
 
+### Asset organization & lineage
+
+Two habits keep the user's asset library clean and traceable — apply them by default, and proactively tell the user you're doing so.
+
+**Organization — group project/batch work in a dedicated folder.** Whenever the user works on a named project or asks for several related assets (a batch), create one asset folder up front and route every generation into it via `folder_id`.
+
+1. `GET /folder/list?type=assets` — reuse an existing folder instead of creating a duplicate.
+2. `POST /folder/create` — `{ "name": "Summer Campaign", "type": "assets" }` → returns the folder `id`.
+3. Pass that `id` as `folder_id` on each `/asset/start` call for the project.
+
+Folders can also be created for the video library with `type: "videos"`.
+
+**Lineage — preserve the edit history with `parent_media_id`.** Whenever a generation is *derived* from an existing asset (edit, animation / image-to-video, upscale, restyle, variation), set `parent_media_id` to the **source asset's id**. This links the new output to its source in the dashboard's history tree so the full chain stays visible (and the output inherits the source's folder).
+
+The reference input and `parent_media_id` are distinct — set **both**: the source goes in `references`/named slot (so the model receives it) *and* in `parent_media_id` (so the lineage is recorded).
+
+```bash
+# Animate an existing image asset, keeping the dashboard history chain
+curl -X POST "https://app.hoox.video/api/public/v1/asset/start" \
+  -H "Authorization: Bearer $HOOX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "video",
+    "model": "grok-imagine-video",
+    "prompt": "The subject turns slowly toward the camera.",
+    "references": [ { "asset_id": "asset_abc123" } ],
+    "parent_media_id": "asset_abc123"
+  }'
+```
+
 ### GET /asset/models
 
 List available AI models for image/video generation.
@@ -506,7 +536,8 @@ Start an AI asset generation job. Returns immediately with asset IDs.
 | `aspect_ratio` | string | No | `"16:9"`, `"9:16"`, `"1:1"`, `"3:2"`, `"2:3"`, `"4:3"`, `"3:4"`, `"auto"` |
 | `resolution` | string | No | `"720p"`, `"1080p"`, `"4k"` (model-dependent) |
 | `model_settings` | object | No | Extra model-specific options (see `/asset/models/{name}`) |
-| `parent_media_id` | string | No | Asset ID to use as video-to-video source |
+| `parent_media_id` | string | No | **Source asset this generation is derived from** (edit, animation, upscale, restyle, variation). Links the output to its source in the dashboard history tree and inherits the source's folder. Set it in addition to passing the source as a reference. See [Organization & lineage](#asset-organization--lineage). |
+| `folder_id` | string | No | Asset folder to save the output(s) into (from `/folder/create` or `/folder/list`). Ignored when `parent_media_id` is set. See [Organization & lineage](#asset-organization--lineage). |
 | `avatar_description` | string | No | Seedance UGC only — subject appearance/actions |
 | `webhook_url` | string | No | URL for async completion callback |
 
@@ -578,6 +609,48 @@ When completed:
 ```
 
 When failed: `{ "status": "failed", "error": { "code": "...", "message": "..." } }`
+
+---
+
+### POST /folder/create
+
+Create an asset or video folder to organize the library. See [Asset organization & lineage](#asset-organization--lineage).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Folder display name |
+| `type` | string | No | `assets` (default) or `videos` |
+| `parent_folder_id` | string | No | Existing folder of the same type to nest under (omit/`null` for a root folder) |
+
+Response (201):
+```json
+{
+  "id": "folder_abc123",
+  "name": "Summer Campaign",
+  "type": "assets",
+  "parent_folder_id": null,
+  "created_at": "2025-01-15T10:30:00.000Z"
+}
+```
+
+Use the returned `id` (for an asset folder) as `folder_id` in `/asset/start`. An invalid `type` or an unknown/mismatched `parent_folder_id` returns `400 invalid_value`.
+
+---
+
+### GET /folder/list
+
+List the folders in the space. Use it to reuse an existing folder's `id` before creating a new one.
+
+Query params: `type` (`assets` or `videos`) — omit to return folders of all types.
+
+Response (200):
+```json
+{
+  "folders": [
+    { "id": "folder_abc123", "name": "Summer Campaign", "type": "assets", "parent_folder_id": null, "created_at": "2025-01-15T10:30:00.000Z" }
+  ]
+}
+```
 
 ---
 
