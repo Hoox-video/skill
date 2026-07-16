@@ -264,7 +264,7 @@ At least one of `prompt`, `script`, `voice_url`, or `avatar_url` must be provide
 | `use_space_media` | boolean | No | Use media from space library (default: true) |
 | `save_media_to_space` | boolean | No | Save generated media to space (default: true) |
 | `enable` | object | No | `{ subtitles?: boolean, broll?: boolean, music?: boolean, transitions?: boolean }` |
-| `sequence_plan` | object | No | Ready-made editing plan. **Takes precedence over `prompt`/`script`.** See [Plan-based generation](#plan-based-generation-sequence_plan). |
+| `sequence_plan` | array | No | Ready-made editing plan (flat array of speech blocks). **Takes precedence over `prompt`/`script`.** See [Plan-based generation](#plan-based-generation-sequence_plan). |
 
 Response (201): `{ "job_id": "run_abc123", "status": "pending", "estimated_credits": 50 }`
 
@@ -275,20 +275,24 @@ Instead of letting Hoox decide the montage, you can hand it a **plan that descri
 **Key rules:**
 
 - **The plan wins over everything.** When `sequence_plan` is present, `prompt` and `script` are ignored and the video is assembled exactly as described. Everything the plan does *not* specify — word timings, subtitles, music, transitions, and missing B-roll — stays automatic.
-- **Fill in as little as possible.** The top-level `voice_id` and `avatar_id` of the request are the **defaults** for the whole plan. Only set a voice or a look *inside* the plan to **override** the default on a specific group or sequence (e.g. a different speaker, or the same person in another look). This keeps plans small.
+- **Fill in as little as possible.** The top-level `voice_id` and `avatar_id` of the request are the **defaults** for the whole plan. Only set a voice or a look *inside* the plan to **override** the default on a specific block or sequence (e.g. a different speaker, or the same person in another look). This keeps plans small.
 - **Never give timings for spoken text.** Word timings are always computed from the generated audio. `duration_ms` is only for silent sequences.
 
-The plan has two nested levels:
+`sequence_plan` is a **flat array of speech blocks** in playback order — two nested levels:
 
-- **`audio_groups[]`** — speech blocks in playback order. One group = one speaker talking continuously (one voice, one parent avatar, one audio track). A group is either fully spoken or fully silent.
-- **`sequences[]`** — visual fragments inside a group, in playback order. Each carries a bit of `text`, plus an optional media and avatar look.
+- **Each array entry is a speech block** = one speaker talking continuously (one voice, one parent avatar, one audio track). A block is either fully spoken or fully silent, and its audio index is derived automatically from its position in the array — you never set it.
+- **`sequences[]`** — visual fragments inside a block, in playback order. Each carries a bit of `text`, plus an optional media and avatar look.
 
-**`audio_group` fields:**
+> **Split into several blocks — don't cram everything into one.** Each block is one continuous take by one speaker. Start a new block whenever the speaker, voice, or avatar changes, and for a longer video break the speech into a handful of blocks rather than a single giant block with every sequence inside.
+
+> **Sequences can be sub-parts of a sentence, not just whole sentences.** Cut wherever you want the visuals to change: put a media on the first half of a sentence and switch to a close-up look on the second half, e.g. `[{ "text": "We waste 3 hours a day", "media": {...} }, { "text": "without even noticing.", "look_id": "..." }]`. The text of a block's sequences is concatenated and spoken as one continuous line — the splits only drive the montage, not the delivery.
+
+**Speech block fields (each array entry):**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sequences` | array | Yes | Visual fragments of this block, in playback order (min 1) |
-| `voice_id` | string | No | Voice for the whole block. Falls back to the request-level `voice_id`. Ignored for silent groups |
+| `voice_id` | string | No | Voice for the whole block. Falls back to the request-level `voice_id`. Ignored for silent blocks |
 | `avatar_id` | string | No | Parent avatar of the block. Falls back to the request-level `avatar_id` |
 | `look_id` | string | No | Default avatar look for the block's sequences |
 | `audio_url` | string | No | Pre-recorded audio URL for the block — skips voice generation for it |
@@ -297,7 +301,7 @@ The plan has two nested levels:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `text` | string \| null | Yes | Spoken text. `null` = silent sequence (needs `duration_ms`, and must be alone in its own group) |
+| `text` | string \| null | Yes | Spoken text — a whole sentence **or just a fragment** of one. `null` = silent sequence (needs `duration_ms`, and must be alone in its own block) |
 | `duration_ms` | number | Conditional | Fixed duration in ms. Only for silent sequences (`text: null`) |
 | `look_id` | string | No | Avatar look override for this sequence only |
 | `media` | object | No | Media shown during this sequence (see below). Omit it to let auto B-roll fill the slot — only happens when **no** sequence of the whole plan carries a media |
@@ -311,9 +315,9 @@ The plan has two nested levels:
 | `show` | string | No | How it covers the avatar: `full` (whole frame), `half` (split with avatar), `background` (behind avatar on green screen), `hide` (attached, not shown). Default `hide` |
 | `start_at` | number | No | For videos: trim the source to start at this time (seconds) |
 
-**Silent pauses:** to insert a pause, add a dedicated group with a single silent sequence and no `voice_id`: `{ "sequences": [{ "text": null, "duration_ms": 1200 }] }`.
+**Silent pauses:** to insert a pause, add a dedicated block with a single silent sequence and no `voice_id`: `{ "sequences": [{ "text": null, "duration_ms": 1200 }] }`.
 
-**Example — two speakers, a look override, a media per sequence, and a pause:**
+**Example — two speakers, a sentence split across sequences (media then look), and a pause:**
 
 ```bash
 curl -X POST "https://app.hoox.video/api/public/v1/generation/start" \
@@ -323,26 +327,24 @@ curl -X POST "https://app.hoox.video/api/public/v1/generation/start" \
     "voice_id": "VOICE_FEMALE_ID",
     "avatar_id": "LOOK_DEFAULT_ID",
     "format": "vertical",
-    "sequence_plan": {
-      "audio_groups": [
-        {
-          "sequences": [
-            { "text": "We waste 3 hours a day.", "media": { "asset_id": "ASSET_ID", "show": "full" } },
-            { "text": "Without even noticing.", "look_id": "LOOK_CLOSEUP_ID" }
-          ]
-        },
-        {
-          "sequences": [ { "text": null, "duration_ms": 1200 } ]
-        },
-        {
-          "voice_id": "VOICE_MALE_ID",
-          "look_id": "LOOK_SECOND_SPEAKER_ID",
-          "sequences": [
-            { "text": "Oh yeah? How come?", "media": { "url": "https://your-domain.com/chart.jpg", "show": "half" } }
-          ]
-        }
-      ]
-    }
+    "sequence_plan": [
+      {
+        "sequences": [
+          { "text": "We waste 3 hours a day", "media": { "asset_id": "ASSET_ID", "show": "full" } },
+          { "text": "without even noticing.", "look_id": "LOOK_CLOSEUP_ID" }
+        ]
+      },
+      {
+        "sequences": [ { "text": null, "duration_ms": 1200 } ]
+      },
+      {
+        "voice_id": "VOICE_MALE_ID",
+        "look_id": "LOOK_SECOND_SPEAKER_ID",
+        "sequences": [
+          { "text": "Oh yeah? How come?", "media": { "url": "https://your-domain.com/chart.jpg", "show": "half" } }
+        ]
+      }
+    ]
   }'
 ```
 
